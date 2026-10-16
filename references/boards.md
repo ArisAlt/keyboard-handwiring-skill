@@ -12,6 +12,8 @@ Machine-readable copy: `boards.json` (used by `scripts/matrix_tool.py`). When a 
 | Pro Micro (ATmega32U4) | AVR | 18 | QMK, Vial | 5 V |
 | nice!nano v2 / SuperMini nRF52840 | nRF52840 | 16 (+5 awkward) | **ZMK only** | 3.3 V |
 
+On a wired split, one pin per half is the TRRS link (suggested: Plus GP28, Zero/Tiny GP29, Pro Micro D2) — it's not available for the matrix.
+
 Max keys without tricks ≈ (pins/2)² — 18 pins → 9×9 = 81 keys. For a split, each half has its own pins; rows per half × 2 = total rows.
 
 ## Waveshare RP2040-Zero
@@ -27,6 +29,7 @@ Max keys without tricks ≈ (pins/2)² — 18 pins → 9×9 = 81 keys. For a spl
 ## Waveshare RP2040-Plus / Raspberry Pi Pico
 - Header GPIOs: GP0–GP22, GP26–GP28 (26 pins).
 - Not usable: GP23 (regulator mode), GP24 (VBUS sense), GP25 (LED), GP29 (VSYS sense, not on header). Pico W boards use these for the radio.
+- Power: VBUS = header pin 40 (USB 5 V — feed per-key LEDs from here), VSYS = 39, 3V3 = 36; GND = pins 3, 8, 13, 18, 23, 28, 33, 38 (skip these when running a ribbon cable).
 
 ## Pro Micro (ATmega32U4)
 - 18 GPIOs: D3 (TX), D2 (RX), D1 (SDA), D0 (SCL), D4, C6, D7, E6, B4, B5, B6, B2, B3, B1, F7, F6, F5, F4.

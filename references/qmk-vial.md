@@ -44,7 +44,7 @@ keyboards/handwired/<name>/
 ```json
 "split": {
   "enabled": true,
-  "serial": {"driver": "vendor", "pin": "GP1"},
+  "serial": {"driver": "vendor", "pin": "GP28"},
   "matrix_pins": {"right": {"rows": ["..."], "cols": ["..."]}}
 }
 ```

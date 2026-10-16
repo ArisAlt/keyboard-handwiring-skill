@@ -2,20 +2,36 @@
 
 ## Wired split (QMK / Vial)
 
+**Two controllers, one firmware, one pin list.** Both halves run the same firmware with the same `matrix_pins` (`MATRIX_ROW_PINS` / `MATRIX_COL_PINS`), so "GP0" on the left controller and "GP0" on the right controller are two different physical pins. Only add `split.matrix_pins.right` (`MATRIX_ROW_PINS_RIGHT` / `MATRIX_COL_PINS_RIGHT`) if the right half is wired to *different* pins (keebio/iris rev8 does this). QMK reads the left half's rows first, then the right's: `MATRIX_ROWS` = 2 × rows per half, and right-half rows are `rows_per_half + r`.
+
+**Each half's wires go to its own controller.** Rows and columns of the left half run only to the left controller, right to right. Nothing crosses between halves except the link cable. In a wiring diagram, draw a controller per half with every row/column home-run to it.
+
+**Mirrored or same direction: a wiring choice the matrix must match.** QMK doesn't force either; both appear in QMK's own keyboards:
+
+| Convention | Right half col 0 | QMK examples |
+|---|---|---|
+| **Mirrored** (mirror-image halves) | outer edge | `lily58/rev1`, `sofle/rev1`, `keebio/iris/rev8`, Sofle Pico |
+| **Same direction** | inner edge (leftmost) | `handwired/dactyl_manuform/5x6`, `ferris/sweep` |
+
+Mirrored is the common choice for mirror-image handwired halves: each column pin then goes to the matching column on both halves (GP10 = outer column on both). Use `matrix_tool.py route --split --mirror-right` for it. When validating an existing build, make sure *every* row of the right half follows one convention. A single thumb key wired the other way is a classic mistake.
+
+**Number columns by physical order.** A column's index should follow its position (outer → inner), not the order a router happened to create it in.
+
 **Cable:** TRRS/TRS (audio jack) is the norm; USB-C-to-USB-C between halves works but looks like a USB port and invites plugging a computer into it.
 
-| Link | Conductors | Notes |
-|---|---|---|
-| Single-wire serial (half duplex) | VCC, GND, DATA → TRS is enough | Default. AVR: soft serial on D0–D3. RP2040: `vendor` driver, any GPIO. |
-| Full-duplex serial | VCC, GND, TX, RX → TRRS | Cross TX→RX between halves. RP2040 only in practice. |
-| I2C | VCC, GND, SDA, SCL → TRRS | Needs ~4.7 kΩ pull-ups on SDA and SCL (one set, on one half). Uses the I2C pins, so no OLED on the same bus without care. |
+| Link | Conductors | Pins per half | Notes |
+|---|---|---|---|
+| Half-duplex serial | VCC, GND, DATA → TRS is enough | 1 | Default. AVR: soft serial on D0–D3 (`split.serial.pin`). RP2040: `driver: vendor`, any GPIO. |
+| Full-duplex serial | VCC, GND, TX, RX → TRRS | 2 | `SERIAL_USART_FULL_DUPLEX`, `SERIAL_USART_TX_PIN` / `RX_PIN`, often `SERIAL_USART_PIN_SWAP`; RP2040 `SERIAL_DRIVER = vendor`. Example: Sofle Pico (TX GP16, RX GP17). |
+| I2C | VCC, GND, SDA, SCL → TRRS | 2 | Needs ~4.7 kΩ pull-ups on SDA and SCL (one set, on one half). Uses the I2C pins, so no OLED on the same bus without care. |
+
+Suggested half-duplex link pins (kept out of the matrix and counted in the pin budget): RP2040-Plus/Pico **GP28**, RP2040-Zero/Tiny **GP29**, Pro Micro **D2**.
 
 Rules:
 - **Same link pin on both halves**, wired jack sleeve/ring/tip identically on both sides (mirror the jack, not the wiring).
 - **Never plug or unplug the TRRS cable while USB is connected.** Sliding the plug briefly shorts VCC to data/GND and can kill a pin or the controller.
 - RP2040 halves: carry 5 V (VSYS/5V pin) over the cable so the far half's regulator powers it; the data line is 3.3 V. Don't link a 5 V Pro Micro half to a 3.3 V RP2040 half.
-- Handedness: decide `EE_HANDS` vs `MASTER_LEFT` vs a hand pin before flashing (see `qmk-vial.md`). Wrong handedness = right half types left-half keys.
-- **Mirrored halves:** handwired right halves are usually built as a mirror image using the same pin list. Decide whether column 0 is the *outer* or *inner* column on each half and make the layout file match. `matrix_tool.py route --split` numbers each half's columns left→right as seen from the top; pass `--mirror-right` to number the right half from its outer edge (same pins, mirrored wiring).
+- Handedness: decide `EE_HANDS` (flash each half with `uf2-split-left` / `uf2-split-right`), `MASTER_LEFT`, or a hand pin (`split.handedness.pin`) before flashing (see `qmk-vial.md`). Wrong handedness = right half types left-half keys.
 
 ## Wireless (ZMK, nRF52840)
 
@@ -51,3 +67,14 @@ Safety notes worth giving every time:
 - USB powers whichever half it's plugged into; on wired splits it also powers the other half through the link VCC.
 - Never connect two USB cables to both halves of a wired split at the same time unless the firmware/board is designed for it.
 - LEDs (WS2812) want 5 V power and a data signal; RP2040's 3.3 V data usually works at short distances, use a level shifter if the first LED misbehaves.
+
+## Per-key RGB on USB power (SK6812MINI / WS2812)
+
+No extra supply is needed if brightness is capped:
+- Each SK6812MINI draws up to **~60 mA at full white** (20 mA per colour) and **~1 mA when dark**. 70 LEDs ≈ 70 mA idle, ≈ 4.2 A full white.
+- A normal USB port gives **500 mA** (many USB-C ports give more, but don't count on it). Subtract ~30–50 mA for the controller.
+- Cap it: `RGB_MATRIX_MAXIMUM_BRIGHTNESS` (or `rgb_matrix.max_brightness` in keyboard.json); for ~70 LEDs ≈ 25 for full white, ~60–80 for typical single-colour effects. Sofle Pico (58 LEDs) uses 127 and relies on dim effects.
+- Take LED **+ from VBUS / 5V** (RP2040-Plus/Pico: VBUS = header pin 40; GND e.g. pin 38), not 3V3.
+- Put **100–470 µF** across + and − at the first LED; on long chains, feed + and − into the far end too.
+- 3.3 V data into LEDs powered at 5 V is out of spec (V_IH ≈ 3.5 V) but usually works over a short first wire; if the first LED flickers, add a 74AHCT125 level shifter.
+- Splits: one chain per half, each from its own controller's `ws2812` pin; tell QMK the count per half with `rgb_matrix.split_count` (e.g. `[29, 29]`).

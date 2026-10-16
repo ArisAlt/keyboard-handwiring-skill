@@ -1,71 +1,76 @@
 {
-  "_comment": "Pin data for scripts/matrix_tool.py. 'pins' = recommended matrix pins in suggested order (edge pins first). 'extra' = usable but awkward (bottom pads, NFC). 'reserved' = do not use. 'split_link' = suggested default pin for a wired split link; it is removed from the matrix pool when --split is used. Set verified:false where the pin map could not be confirmed against a manufacturer source.",
+  "_comment": "Pin data for scripts/matrix_tool.py. 'pins' = recommended matrix pins in suggested order (edge pins first). 'extra' = usable but awkward (bottom pads, NFC). 'reserved' = do not use. 'split_link' = suggested half-duplex TRRS pin for a wired split (same on both halves); it is removed from the matrix pool when --split is used. Set verified:false where the pin map could not be confirmed against a manufacturer source. 'led_supply' = where per-key LED + and − connect.",
   "boards": {
     "rp2040_zero": {
       "label": "Waveshare RP2040-Zero",
       "mcu": "RP2040",
       "logic_v": 3.3,
-      "firmware": ["qmk", "vial"],
-      "qmk": {"processor": "RP2040", "bootloader": "rp2040"},
+      "firmware": ["qmk","vial"],
+      "qmk": { "processor": "RP2040", "bootloader": "rp2040" },
       "pins": ["GP0","GP1","GP2","GP3","GP4","GP5","GP6","GP7","GP8","GP9","GP10","GP11","GP12","GP13","GP14","GP15","GP26","GP27","GP28","GP29"],
       "extra": ["GP17","GP18","GP19","GP20","GP21","GP22","GP23","GP24","GP25"],
-      "reserved": {"GP16": "onboard WS2812 RGB LED"},
-      "split_link": "GP1",
+      "reserved": { "GP16": "onboard WS2812 RGB LED" },
+      "split_link": "GP29",
       "verified": true,
-      "notes": "20 castellated edge GPIOs (GP0-15, GP26-29). GP17-25 are small pads on the underside: usable, harder to solder. No SWD broken out. Not 5 V tolerant."
+      "notes": "20 castellated edge GPIOs (GP0-15, GP26-29). GP17-25 are small pads on the underside: usable, harder to solder. No SWD broken out. Not 5 V tolerant.",
+      "led_supply": { "vdd": "5V", "vss": "GND" }
     },
     "rp2040_tiny": {
       "label": "Waveshare RP2040-Tiny",
       "mcu": "RP2040",
       "logic_v": 3.3,
-      "firmware": ["qmk", "vial"],
-      "qmk": {"processor": "RP2040", "bootloader": "rp2040"},
+      "firmware": ["qmk","vial"],
+      "qmk": { "processor": "RP2040", "bootloader": "rp2040" },
       "pins": ["GP0","GP1","GP2","GP3","GP4","GP5","GP6","GP7","GP8","GP9","GP10","GP11","GP12","GP13","GP14","GP15","GP26","GP27","GP28","GP29"],
       "extra": [],
-      "reserved": {"GP16": "onboard WS2812 RGB LED"},
-      "split_link": "GP1",
+      "reserved": { "GP16": "onboard WS2812 RGB LED" },
+      "split_link": "GP29",
       "verified": false,
-      "notes": "20 GPIOs on castellated edges; USB-C lives on a separate adapter board joined by an 8-pin FPC cable. Pin list NOT verified against Waveshare's diagram — check the silkscreen/wiki before wiring."
+      "notes": "20 GPIOs on castellated edges; USB-C lives on a separate adapter board joined by an 8-pin FPC cable. Pin list NOT verified against Waveshare's diagram — check the silkscreen/wiki before wiring.",
+      "led_supply": { "vdd": "5V", "vss": "GND" }
     },
     "rp2040_plus": {
       "label": "Waveshare RP2040-Plus / Raspberry Pi Pico (Pico pinout)",
       "mcu": "RP2040",
       "logic_v": 3.3,
-      "firmware": ["qmk", "vial"],
-      "qmk": {"processor": "RP2040", "bootloader": "rp2040"},
+      "firmware": ["qmk","vial"],
+      "qmk": { "processor": "RP2040", "bootloader": "rp2040" },
       "pins": ["GP0","GP1","GP2","GP3","GP4","GP5","GP6","GP7","GP8","GP9","GP10","GP11","GP12","GP13","GP14","GP15","GP16","GP17","GP18","GP19","GP20","GP21","GP22","GP26","GP27","GP28"],
       "extra": [],
-      "reserved": {"GP23": "regulator power-save control (Pico)", "GP24": "VBUS sense", "GP25": "onboard LED", "GP29": "VSYS/3 voltage sense (ADC3), not on header"},
-      "split_link": "GP1",
+      "reserved": { "GP23": "regulator power-save control (Pico)", "GP24": "VBUS sense", "GP25": "onboard LED", "GP29": "VSYS/3 voltage sense (ADC3), not on header" },
+      "split_link": "GP28",
       "verified": true,
-      "notes": "26 header GPIOs. GP23/24/25/29 are wired to board functions and not on the header. Pico W variants use these for the wireless chip."
+      "notes": "26 header GPIOs. GP23/24/25/29 are wired to board functions and not on the header. Pico W variants use these for the wireless chip.",
+      "led_supply": { "vdd": "VBUS (header pin 40)", "vss": "GND (e.g. header pin 38)" }
     },
     "pro_micro": {
       "label": "Pro Micro (ATmega32U4, 5 V)",
       "mcu": "atmega32u4",
       "logic_v": 5,
-      "firmware": ["qmk", "vial"],
-      "qmk": {"processor": "atmega32u4", "bootloader": "caterina"},
+      "firmware": ["qmk","vial"],
+      "qmk": { "processor": "atmega32u4", "bootloader": "caterina" },
       "pins": ["D4","C6","D7","E6","B4","B5","B6","B2","B3","B1","F7","F6","F5","F4","D3","D2","D1","D0"],
       "extra": [],
-      "reserved": {"B0": "RX LED, not broken out", "D5": "TX LED, not broken out", "B7": "not broken out", "E2": "HWB, not broken out"},
+      "reserved": { "B0": "RX LED, not broken out", "D5": "TX LED, not broken out", "B7": "not broken out", "E2": "HWB, not broken out" },
       "split_link": "D2",
       "verified": true,
-      "notes": "18 GPIOs. D0/D1 = I2C SDA/SCL (needed for OLEDs or I2C split). SOFT_SERIAL_PIN must be an INT pin: D0-D3 (D2 is the common choice; D0 on many boards). Elite-C/clones expose extra pins (B7, D5, C7, F1, F0)."
+      "notes": "18 GPIOs. D0/D1 = I2C SDA/SCL (needed for OLEDs or I2C split). SOFT_SERIAL_PIN must be an INT pin: D0-D3 (D2 is the common choice; D0 on many boards). Elite-C/clones expose extra pins (B7, D5, C7, F1, F0).",
+      "led_supply": { "vdd": "VCC (5 V)", "vss": "GND" }
     },
     "nice_nano_v2": {
       "label": "nice!nano v2 (nRF52840) and Pro-Micro-pinout clones (SuperMini nRF52840)",
       "mcu": "nRF52840",
       "logic_v": 3.3,
       "firmware": ["zmk"],
-      "zmk": {"board": "nice_nano_v2"},
+      "zmk": { "board": "nice_nano_v2" },
       "pins": ["P0.08","P0.06","P0.17","P0.20","P0.22","P0.24","P1.00","P0.11","P1.04","P1.06","P1.11","P1.13","P1.15","P0.02","P0.29","P0.31"],
-      "pro_micro_index": {"P0.08":0,"P0.06":1,"P0.17":2,"P0.20":3,"P0.22":4,"P0.24":5,"P1.00":6,"P0.11":7,"P1.04":8,"P1.06":9,"P0.09":10,"P0.10":16,"P1.11":14,"P1.13":15,"P1.15":18,"P0.02":19,"P0.29":20,"P0.31":21},
+      "pro_micro_index": { "P0.08": 0, "P0.06": 1, "P0.17": 2, "P0.20": 3, "P0.22": 4, "P0.24": 5, "P1.00": 6, "P0.11": 7, "P1.04": 8, "P1.06": 9, "P0.09": 10, "P0.10": 16, "P1.11": 14, "P1.13": 15, "P1.15": 18, "P0.02": 19, "P0.29": 20, "P0.31": 21 },
       "extra": ["P0.09","P0.10","P1.01","P1.02","P1.07"],
-      "reserved": {"P0.13": "external VCC power switch (ext-power)", "P0.15": "onboard blue LED"},
+      "reserved": { "P0.13": "external VCC power switch (ext-power)", "P0.15": "onboard blue LED" },
       "split_link": null,
       "verified": true,
-      "notes": "ZMK only. Matches ZMK's pro_micro gpio-map (positions 0-10,14-16,18-21). P0.09/P0.10 are NFC pins (pro_micro 10/16): usable as GPIO but use them last. P1.01/P1.02/P1.07 are inner pads, low-frequency I/O only. Wireless splits need no link pin. Clones share the edge pinout but often differ in pads, charging current and power switch — check the seller's diagram."
+      "notes": "ZMK only. Matches ZMK's pro_micro gpio-map (positions 0-10,14-16,18-21). P0.09/P0.10 are NFC pins (pro_micro 10/16): usable as GPIO but use them last. P1.01/P1.02/P1.07 are inner pads, low-frequency I/O only. Wireless splits need no link pin. Clones share the edge pinout but often differ in pads, charging current and power switch — check the seller's diagram.",
+      "led_supply": { "vdd": "VCC (switched by P0.13 ext-power)", "vss": "GND" }
     }
   }
 }

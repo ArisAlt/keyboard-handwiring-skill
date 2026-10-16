@@ -39,3 +39,10 @@ Use one colour for rows and another for columns (or a ribbon cable whose colour 
 | Nothing works, controller is detected | `diode_direction` opposite to soldering |
 
 Quick test without switches: short a row pin to a column pin at the controller with tweezers — the matching key should register. Multimeter in diode mode across a diode shows ~0.6 V one way and open the other.
+
+## Drawing a wiring diagram people can follow
+- **Dead zone:** wires running side by side (within ~30° of parallel) keep a clear gap between their *edges*, around 2 px at 1:1 / 4 px zoomed. Crossing at an angle is fine; rows cross columns everywhere.
+- **Pads:** a wire touches only the pads at its own two ends and stays clear of every other pad. On a real board a wire over a foreign pad could short. Draw pads at true size so clearances are honest.
+- **Shortest clean route:** use a straight link between facing pads when it keeps both rules; otherwise route down → across → down in its own lane. Never detour where a straight link is clean.
+- **Colour by pin**, not by drawing order, so one row keeps one colour on both halves and colours follow a ribbon cable's order.
+- **Splits:** draw one controller per half, home-run each half's rows/columns to its own controller, and draw the TRRS/BLE link between them.

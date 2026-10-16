@@ -8,6 +8,8 @@ A [Claude Agent Skill](https://docs.claude.com/en/docs/agents-and-tools/agent-sk
 - **Split keyboards and cables**: TRRS/serial links, handedness, mirrored halves, and the difference between QMK (right half = extra rows) and ZMK (right half = extra columns).
 - **Wireless and batteries**: LiPo choice and polarity, power switches, charge current, battery life, ZMK power/battery config.
 - **Firmware config**: QMK `keyboard.json`, Vial (`vial.json`, UID, unlock combo), ZMK kscan + matrix transform.
+- **Amoeba Royale single-key PCBs**: solder-side pad map, ROW2COL diode, LED chain and power feed.
+- **Readable wiring diagrams**: dead zone between parallel wires, wires never over foreign pads, a controller per split half.
 
 ## Install
 
@@ -53,7 +55,8 @@ keyboard-handwiring-skill/
 │   ├── boards.json / boards.md  # controller pin data
 │   ├── qmk-vial.md
 │   ├── zmk.md
-│   ├── split-and-power.md       # TRRS links, handedness, LiPo, battery life
+│   ├── split-and-power.md       # two controllers, mirrored halves, TRRS, LiPo, LED power budget
+│   ├── amoeba-royale.md         # single-key PCB pads, ROW2COL, LED chain
 │   ├── wiring-practices.md      # diodes, wire, soldering order, debugging
 │   └── layout-tools.md          # KLE, VIA labels, kle-ng, QMK formats
 └── evals/evals.json             # test prompts for skill development
@@ -64,6 +67,11 @@ keyboard-handwiring-skill/
 Pin data lives in `references/boards.json`. To add a board, add an entry with `pins` (recommended matrix pins in order), `extra` (usable but awkward), `reserved` (with the reason), `firmware`, and a source in the PR description. Boards whose pinout isn't confirmed against the manufacturer get `"verified": false` — `rp2040_tiny` needs a confirmation.
 
 Facts were checked against: QMK docs (split keyboards, RP2040), ZMK docs and board files (nice!nano `pro_micro` gpio-map, battery config), Waveshare and Raspberry Pi pinouts, and the kle-ng documentation. Firmware projects move fast — corrections welcome.
+
+## Changelog
+
+- **1.1.0**: Amoeba Royale reference (pad map, ROW2COL); split conventions checked against QMK's lily58/sofle/iris/dactyl/sweep and the Sofle Pico (one pin list, mirrored vs same direction, controller per half, half/full-duplex TRRS); per-key RGB power budget; wiring-diagram readability rules; TRRS link pins and LED supply pins in `boards.json`.
+- **1.0.0**: first release.
 
 ## License
 

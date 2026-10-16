@@ -1,6 +1,6 @@
 ---
 name: keyboard-handwiring
-description: Plan, wire and validate handwired (and simple PCB) mechanical keyboards — switch matrix design, row/column assignment, diode direction, microcontroller pinouts (RP2040-Zero/Tiny/Plus/Pico, Pro Micro, nice!nano and clones), pin budgets, split-keyboard links (TRRS/serial, handedness), wireless power and LiPo batteries, and firmware config for QMK, Vial/VIA and ZMK. Use this skill whenever someone is building or debugging a custom keyboard, imports a KLE / keyboard-layout-editor / kle-ng / VIA / QMK info.json layout, asks which pins to solder, how to route rows and columns, why keys ghost or don't register, how to wire a split or wireless board, how to size or connect a battery, or wants matrix/pin tables or keyboard.json, config.h, vial.json or ZMK overlay files generated — even if they never say "matrix" or "handwire".
+description: Plan, wire and validate handwired (and simple PCB) mechanical keyboards — including Amoeba Royale single-key PCBs — switch matrix design, row/column assignment, diode direction, microcontroller pinouts (RP2040-Zero/Tiny/Plus/Pico, Pro Micro, nice!nano and clones), pin budgets, split-keyboard links (TRRS/serial, handedness), wireless power and LiPo batteries, and firmware config for QMK, Vial/VIA and ZMK. Use this skill whenever someone is building or debugging a custom keyboard, imports a KLE / keyboard-layout-editor / kle-ng / VIA / QMK info.json layout, asks which pins to solder, how to route rows and columns, why keys ghost or don't register, how to wire a split or wireless board, how to size or connect a battery, or wants matrix/pin tables or keyboard.json, config.h, vial.json or ZMK overlay files generated — even if they never say "matrix" or "handwire".
 ---
 
 # Keyboard Handwiring
@@ -37,7 +37,7 @@ python scripts/matrix_tool.py validate vial.json --board pro_micro --split --fir
 - `route` auto-assigns `row,col` from geometry (rotation-aware), keeps the file's key order, resolves collisions, and can write: `via`/`kle` (layout with `row,col` in legend position 0, original legends kept), `qmk` (`keyboard.json`: processor, pins, split serial, layout), or `zmk` (kscan + matrix-transform snippet, right half as column offset).
 - `validate` checks an already-annotated layout: duplicate or missing coordinates (VIA `option,choice` alternates may share), unused rows/columns, pin budget per half, split row parity, Vial unlock-combo keys, board/firmware compatibility.
 - Both print the pin plan: each row/column → MCU pin → the keys on that wire. Add `--json` for machine-readable output. Exit code 1 means errors.
-- `--mirror-right` numbers the right half's columns from its outer edge — the usual choice when the right half is wired as a mirror image of the left with the same pin list.
+- `--mirror-right` numbers the right half's columns from its outer edge (QMK `lily58/rev1`, `sofle` style) — the usual choice when the right half is wired as a mirror image of the left with the same pin list. Without it, col 0 is the right half's inner (leftmost) column (`handwired/dactyl_manuform` style). Either is valid; the matrix must match the wiring, consistently for every row.
 
 The router favours **straight wires** (easiest to solder). Commercial designs often fold stray keys into another row to save a pin — e.g. Lily58 puts its inner `[`/`]` keys in the thumb row, giving 6 columns per half where straight routing gives 7. Offer folding only when pins are short, and describe the fold physically ("the `[` key joins the thumb-row wire").
 
@@ -66,7 +66,7 @@ Deliver, in this order:
 4. **Bottom-view note** — when you flip the board to solder, left and right swap. Describe positions as seen from the side being soldered.
 5. **Test plan** — continuity-test each row and column to its pin before flashing; then flash and press every key (QMK `qmk console` / ZMK keymap tester / Vial matrix tester).
 
-For split, wireless and battery builds also read `references/split-and-power.md`. For practical soldering detail read `references/wiring-practices.md`.
+For split, wireless, battery and per-key RGB builds also read `references/split-and-power.md` (two controllers with one pin list, mirrored vs same-direction halves, TRRS half/full duplex, LED power budget). For practical soldering detail and how to draw a readable wiring diagram read `references/wiring-practices.md`. For **Amoeba Royale** single-key PCBs read `references/amoeba-royale.md`: their diode makes the matrix **ROW2COL**.
 
 ### 5. Generate firmware config
 
@@ -80,6 +80,9 @@ Generated config must reuse the **exact** pin order and coordinates from step 3.
 
 Re-run `validate` on the final layout. Also check:
 - `MATRIX_ROWS` for a split = 2 × rows per half (QMK reads left rows first, then right).
+- Split: each half's wires run to its own controller; the TRRS link pin is the same on both halves and not used in the matrix.
+- Amoeba Royale boards: `ROW2COL`, not `COL2ROW`.
+- Per-key RGB: brightness capped for the USB budget, `ws2812` pin not in the matrix.
 - Vial unlock combo points at keys that exist.
 - Board actually supports the chosen firmware.
 

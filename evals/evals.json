@@ -1,0 +1,23 @@
+{
+  "skill_name": "keyboard-handwiring",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I made this layout in kle-ng (attached as layout.json, it's an Alice-style board with rotated halves). I have a Waveshare RP2040-Zero. Which pins do I solder each row and column to, and which way do the diodes go?",
+      "expected_output": "Matrix fits in 20 edge pins (or explains the overflow), avoids GP16, gives a per-row/column pin table and says the diode stripe faces the row wire for COL2ROW.",
+      "files": ["AliceZero.json"]
+    },
+    {
+      "id": 2,
+      "prompt": "building a wired split 5x6 per side with two pro micros and a trrs cable. give me the keyboard.json for qmk and tell me how to wire the jack. also how do i make the right side know it's the right side",
+      "expected_output": "keyboard.json with 5 row pins per half, split.enabled, bitbang serial on D0-D3 (not also used in matrix), TRS/TRRS wiring VCC/GND/data identical on both halves, warning not to hot-plug TRRS, handedness options (EE_HANDS/MASTER_LEFT/SPLIT_HAND_PIN).",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Converting my corne to wireless with two nice!nanos and 110mAh batteries. Can I keep using Vial? How do I wire the battery and power switch, and roughly how long will it last with the OLEDs on?",
+      "expected_output": "States nice!nano is ZMK-only (no Vial; suggests ZMK Studio/keymap editing instead), battery + through switch to B+, check JST polarity, 100 mA charge OK for 110 mAh, central half drains faster, OLEDs cut battery life substantially, ZMK sleep/ext-power settings.",
+      "files": []
+    }
+  ]
+}

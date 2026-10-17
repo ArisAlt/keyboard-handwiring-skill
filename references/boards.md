@@ -35,6 +35,8 @@ Max keys without tricks ≈ (pins/2)² — 18 pins → 9×9 = 81 keys. For a spl
 - 18 GPIOs: D3 (TX), D2 (RX), D1 (SDA), D0 (SCL), D4, C6, D7, E6, B4, B5, B6, B2, B3, B1, F7, F6, F5, F4.
 - `SOFT_SERIAL_PIN` must be an interrupt pin: **D0–D3**. D2 is the usual split pin; avoid D0/D1 if you also want an I2C OLED.
 - 5 V logic. Elite-C and other clones add pins (B7, D5, C7, F1, F0) — only use them if the user has that board.
+- B0 and D5 drive the Pro Micro's RX/TX LEDs (the "secret bonus pins"): unusable unless you desolder those tiny LEDs. Old generators (kbfirmware.com) sometimes assign B0 — change it.
+- Pro Micro silkscreen uses Arduino numbers; firmware uses port names: TX0=D3, RX1=D2, 2=D1, 3=D0, 4=D4, 5=C6, 6=D7, 7=E6, 8=B4, 9=B5, 10=B6, 16=B2, 14=B3, 15=B1, A0=F7, A1=F6, A2=F5, A3=F4. Bootloader: short RST to GND (twice quickly on caterina).
 - Bootloader `caterina` (Pro Micro) vs `atmel-dfu` (Elite-C) — ask which board.
 
 ## nice!nano v2 (and Pro-Micro-footprint nRF52840 clones)

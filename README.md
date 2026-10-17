@@ -70,6 +70,7 @@ Facts were checked against: QMK docs (split keyboards, RP2040), ZMK docs and boa
 
 ## Changelog
 
+- **1.1.1**: checked against Ewen Cluney's *Hand-Wired Keyboard Guide* (2021): table of outdated QMK advice (`FLIP_HALF` removed 2023, `RGB_DI_PIN` now a build error, no `MATRIX_*_PINS_LEFT`, `MASTER_LEFT` belongs in config.h), direct wiring config, wire-prep tips, extra debug cases, Pro Micro Arduino↔port pin names.
 - **1.1.0**: Amoeba Royale reference (pad map, ROW2COL); split conventions checked against QMK's lily58/sofle/iris/dactyl/sweep and the Sofle Pico (one pin list, mirrored vs same direction, controller per half, half/full-duplex TRRS); per-key RGB power budget; wiring-diagram readability rules; TRRS link pins and LED supply pins in `boards.json`.
 - **1.0.0**: first release.
 

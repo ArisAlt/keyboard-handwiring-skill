@@ -77,3 +77,22 @@ Vial = QMK fork with live remapping and a security unlock. Build in the **vial-q
 ## Keymap sanity
 
 Give layer 0 real keycodes. A layer 0 full of `KC_TRNS` produces a keyboard that types nothing until remapped — and a dead board after an EEPROM reset. 4 layers is the VIA/Vial default dynamic layer count.
+
+## Outdated advice in older guides (pre-2023)
+
+Many handwiring guides predate QMK's data-driven config. Translate before copying:
+
+| Old guide says | Current QMK |
+|---|---|
+| `#define FLIP_HALF` to mirror a split | **Not a QMK setting** (it was a per-keyboard layout trick, removed May 2023). Mirror with the matrix numbering (right half's outer column = col 0) or a reversed `MATRIX_COL_PINS_RIGHT` / `split.matrix_pins.right`. |
+| `RGB_DI_PIN`, `RGBLED_NUM` | `RGB_DI_PIN` now **fails the build**: use `ws2812.pin` (or `WS2812_DI_PIN`) and `rgblight.led_count` / `rgb_matrix` layout in keyboard.json. |
+| `MATRIX_ROW_PINS_LEFT` | Doesn't exist: the plain `MATRIX_*_PINS` are the left half; only `_RIGHT` exists. |
+| `MASTER_LEFT` in rules.mk | `config.h` (or prefer `EE_HANDS` / `split.handedness`). |
+| `SPLIT_KEYBOARD = yes`, `SOFT_SERIAL_PIN`, `USE_I2C` | Still work, but keyboard.json `split.enabled`, `split.serial.pin`/`driver`, `split.transport.protocol` is the current way. |
+| `ENCODERS_PAD_A/B`, `ENCODER_DIRECTION_FLIP` in rules.mk | keyboard.json `encoder.rotary: [{pin_a, pin_b}]`; `ENCODER_DIRECTION_FLIP` goes in `config.h`. |
+| `#define LAYOUT(...)` macro in `<kb>.h` with `KC_NO` gaps | The `layouts` array in keyboard.json generates `LAYOUT()`; empty matrix positions need nothing. |
+| `make <kb>:<keymap>` | Still works; `qmk compile -kb <kb> -km <keymap>` for QMK (Vial: use `make` in vial-qmk). |
+
+## Direct wiring (≤ ~18 keys, no diodes)
+
+Each switch: one leg to a GPIO, the other to GND. keyboard.json: `"matrix_pins": {"direct": [["F7", "F6", "F5", "F4"]]}` (rows of pins, `null` for gaps); old config.h equivalent `DIRECT_PINS`. Splits: `split.matrix_pins.right.direct`. A 3×3 matrix still uses fewer pins (6) than direct (9), so direct wiring wins only for very small pads or when you want no diodes.

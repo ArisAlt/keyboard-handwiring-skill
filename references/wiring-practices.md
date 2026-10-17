@@ -11,6 +11,14 @@
 - Many builders use the diode leg itself as the row bus: bend each cathode leg sideways to touch the next diode's leg along the row.
 - Reversed diodes make whole rows/keys dead or ghost; if *every* key is dead, the firmware direction is probably the opposite of the soldering — flip `diode_direction` instead of resoldering.
 
+## Wire preparation
+- **Stranded wire:** twist the strands and tin the end (soak a little solder in) before soldering; too much solder and you can't bend it.
+- **One long wire per row/column:** strip a long bit at the end, then use the strippers to push "windows" of insulation along the wire at each switch (solid core slides more easily). Short jumpers between switches work too, but take much longer.
+- **Ends:** make a small hook with tweezers so the wire holds onto the pin before soldering; in the middle, a loop around the pin or a wire laid alongside both work.
+- **Lengths:** the row/column ends must reach the controller; total wire volume must still fit the case — thinner, flexible (silicone) wire helps. A ribbon cable keeps the controller end tidy (split it with a craft knife). If one is short, splice and insulate the joint.
+- **Diode prep:** loop the anode leg around the switch pin, bend the cathode leg at a right angle along the row; diodes on paper tape can be bent all at once.
+- **Insulation:** heat shrink or Kapton where exposed wires come close, especially around encoders.
+
 ## Order of work
 1. Plan on paper/screen: pin table, which way diodes face, which side is up.
 2. Fit switches into the plate.
@@ -37,6 +45,13 @@ Use one colour for rows and another for columns (or a ribbon cable whose colour 
 | Key repeats/chatters | Cold joint, damaged switch; raise debounce (`DEBOUNCE`) only after checking hardware |
 | Right half types left half's keys | Handedness config wrong |
 | Nothing works, controller is detected | `diode_direction` opposite to soldering |
+| Two whole rows (or columns) swapped | Those two wires are on each other's pins |
+| Direct-wired: a group of keys dead | The shared GND wire/joint |
+| A feature (encoder, RGB, OLED) does nothing | Not enabled in keyboard.json `features` / rules.mk |
+
+Test every key with an online key tester (e.g. keyboardtester.com) or QMK's `qmk console` matrix debug.
+
+A **reset switch** (momentary switch between RST and GND) saves fiddling with tweezers on boards without a reachable boot/reset button.
 
 Quick test without switches: short a row pin to a column pin at the controller with tweezers — the matching key should register. Multimeter in diode mode across a diode shows ~0.6 V one way and open the other.
 

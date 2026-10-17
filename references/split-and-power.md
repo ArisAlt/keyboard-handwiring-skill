@@ -12,8 +12,22 @@
 |---|---|---|
 | **Mirrored** (mirror-image halves) | outer edge | `lily58/rev1`, `sofle/rev1`, `keebio/iris/rev8`, Sofle Pico |
 | **Same direction** | inner edge (leftmost) | `handwired/dactyl_manuform/5x6`, `ferris/sweep` |
+| **Flipped in firmware** | inner edge (leftmost), but wired mirror-image | right controller gets a reversed `split.matrix_pins.right` cols list (`NO_PIN`/null padded), like `keebio/iris/rev8` (which uses fully different right pins) |
 
-Mirrored is the common choice for mirror-image handwired halves: each column pin then goes to the matching column on both halves (GP10 = outer column on both). Use `matrix_tool.py route --split --mirror-right` for it. When validating an existing build, make sure *every* row of the right half follows one convention. A single thumb key wired the other way is a classic mistake.
+Mirrored is the common choice for mirror-image handwired halves: each column pin then goes to the matching column on both halves (GP10 = outer column on both). It's `matrix_tool.py route --split`'s default (`--right-wiring mirrored|same|flipped`).
+
+**Uneven halves are allowed.** Most splits are symmetric (Lily58, Corne, Sofle, Kyria), but QMK only needs the same matrix size and pin count on both controllers: Keebio Quefrency has 30 + 37 keys, Sinc 38 + 44. The smaller half simply leaves some matrix positions (and column pins) unused, or uses its own `split.matrix_pins.right` padded with `NO_PIN`.
+
+**Declare the split explicitly in firmware** (keyboard.json shown; config.h/rules.mk equivalents in `qmk-vial.md`):
+```json
+"split": {
+  "enabled": true,
+  "transport": {"protocol": "serial"},
+  "serial": {"driver": "vendor", "pin": "GP28"},
+  "matrix_pins": {"right": {"rows": ["GP0","GP1","GP2","GP3","GP4"], "cols": ["GP10","GP9","GP8","GP7","GP6","GP5"]}}
+}
+```
+plus handedness in config.h: `#define MASTER_LEFT` (USB on the left), or `#define EE_HANDS` and flash each half once with `:uf2-split-left` / `:uf2-split-right`, or a hand pin (`split.handedness.pin`). When validating an existing build, make sure *every* row of the right half follows one convention. A single thumb key wired the other way is a classic mistake.
 
 **Number columns by physical order.** A column's index should follow its position (outer → inner), not the order a router happened to create it in.
 

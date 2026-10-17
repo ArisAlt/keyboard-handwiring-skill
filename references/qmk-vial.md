@@ -44,13 +44,15 @@ keyboards/handwired/<name>/
 ```json
 "split": {
   "enabled": true,
+  "transport": {"protocol": "serial"},
   "serial": {"driver": "vendor", "pin": "GP28"},
   "matrix_pins": {"right": {"rows": ["..."], "cols": ["..."]}}
 }
 ```
+config.h equivalents: `SPLIT_KEYBOARD = yes` (rules.mk), `SOFT_SERIAL_PIN` / `SERIAL_USART_TX_PIN`, `MATRIX_ROW_PINS_RIGHT` / `MATRIX_COL_PINS_RIGHT`, `MASTER_LEFT` / `EE_HANDS`. Writing `split.matrix_pins.right` even when it equals the left list is harmless and makes each side's wiring explicit.
 
 - `matrix_pins.rows` lists **one half's** rows; QMK makes `MATRIX_ROWS` = 2 × that. In `layout`, right-half keys use rows `rows_per_half + r`.
-- Only add `split.matrix_pins.right` if the right half uses different pins. Both halves must have the same pin count — pad with `NO_PIN`.
+- `split.matrix_pins.right` is required when the right half uses different pins (or a reversed order); both halves must have the same pin count — pad with `NO_PIN` (`null` in JSON).
 - Serial driver: AVR → `bitbang` (soft serial on D0–D3); RP2040 → `vendor` (PIO; single-wire half duplex on any GPIO). Full duplex needs TX+RX pins and a 4-conductor cable.
 - Handedness, highest priority first: `SPLIT_HAND_PIN`, `SPLIT_HAND_MATRIX_GRID`, `EE_HANDS` (flash each half with `:uf2-split-left` / `:uf2-split-right` or `dfu-split-*` / `avrdude-split-*`), `MASTER_LEFT`/`MASTER_RIGHT` (default: left = USB side).
 

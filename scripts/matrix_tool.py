@@ -253,7 +253,10 @@ def split_x(keys):
     return best_x
 
 
-def route(keys, split, mirror_right, row_tol, col_tol):
+def route(keys, split, right_wiring, row_tol, col_tol):
+    """right_wiring: "mirrored" (right half's outer column = col 0, QMK lily58/sofle),
+    "same" (leftmost = col 0, QMK handwired/dactyl_manuform) or "flipped" (numbered like
+    "same" but wired mirror-image; the right controller gets a reversed column list)."""
     mk = matrix_keys(keys)
     if not mk:
         raise ValueError("No keys found in layout")
@@ -269,8 +272,8 @@ def route(keys, split, mirror_right, row_tol, col_tol):
             k["matrix"] = [k.pop("_lr"), k.pop("_lc")]
         for k in right:
             c = k.pop("_lc")
-            k["matrix"] = [rph + k.pop("_lr"), (rc - 1 - c) if mirror_right else c]
-        info.update(split_at=round(sx, 3), rows_per_half=rph, left=(lr, lc), right=(rr, rc))
+            k["matrix"] = [rph + k.pop("_lr"), (rc - 1 - c) if right_wiring == "mirrored" else c]
+        info.update(split_at=round(sx, 3), rows_per_half=rph, left=(lr, lc), right=(rr, rc), right_wiring=right_wiring)
     else:
         grid_route(mk, row_tol, col_tol)
         for k in mk:
@@ -280,8 +283,9 @@ def route(keys, split, mirror_right, row_tol, col_tol):
 
 # ────────────────────────────── validation ──────────────────────────────
 
-def analyse(keys, board, split, unlock, firmware, split_link, file_pins=None):
-    errors, warnings = [], []
+def analyse(keys, board, split, unlock, firmware, split_link, file_pins=None,
+            right_wiring="mirrored", file_right_pins=None, split_guessed=False):
+    errors, warnings, notes = [], [], []
     mk = matrix_keys(keys)
     missing = [k for k in mk if not k["matrix"]]
     for k in missing:
@@ -385,7 +389,45 @@ def analyse(keys, board, split, unlock, firmware, split_link, file_pins=None):
             if len(fc) != n_cols:
                 errors.append(f"matrix_pins.cols has {len(fc)} pins but the layout uses {n_cols} columns")
             plan.update(rows=fr, cols=fc, source="file", pins_used=len(fr) + len(fc))
-    return {"errors": errors, "warnings": warnings, "rows": n_rows, "cols": n_cols,
+    # ── split: what each controller gets ──────────────────────────────────────
+    if split and coords:
+        L = [k for k in mk if k["matrix"] and k["matrix"][0] < rph]
+        R = [k for k in mk if k["matrix"] and k["matrix"][0] >= rph]
+        lcols = {k["matrix"][1] for k in L}
+        rcols = {k["matrix"][1] for k in R}
+        notes.append(f"Two controllers: left half {len(L)} keys ({len({k['matrix'][0] for k in L})}×{len(lcols)}), "
+                     f"right half {len(R)} keys ({len({k['matrix'][0] - rph for k in R})}×{len(rcols)}); "
+                     f"each half's rows/columns wire only to its own controller.")
+        if len(L) != len(R):
+            notes.append("Uneven halves are fine (QMK: Keebio Quefrency 30+37 keys, Sinc 38+44); "
+                         "both controllers just share one matrix size / pin count.")
+        if L and R and split_guessed:  # only when WE split the layout by position
+            gap = min(k["cx"] - k["w"] / 2 for k in R) - max(k["cx"] + k["w"] / 2 for k in L)
+            if gap < 0.25:
+                warnings.append(("Halves overlap by %.2fu" % -gap if gap < 0 else "Halves are only %.2fu apart" % gap)
+                                + ": the layout wasn't drawn as two halves, so the split line is a guess — check which keys landed on each half")
+        if plan:
+            right = None
+            if file_right_pins:
+                right = {"rows": file_right_pins.get("rows") or plan["rows"], "cols": file_right_pins.get("cols") or plan["cols"]}
+                if len(right["rows"]) != len(plan["rows"]) or len(right["cols"]) != len(plan["cols"]):
+                    errors.append("split.matrix_pins.right must have the same number of row and column pins as the left (pad with null / NO_PIN)")
+                known = set(board["pins"]) | set(board.get("extra", []))
+                for p in [*right["rows"], *right["cols"]]:
+                    if p not in (None, "NO_PIN") and p not in known:
+                        errors.append(f"right-hand pin {p} is not a usable GPIO on {board['label']}")
+                notes.append("Right controller has its own pin list (split.matrix_pins.right).")
+            elif right_wiring == "flipped":
+                k = len(rcols)
+                right = {"rows": plan["rows"], "cols": plan["cols"][:k][::-1] + ["NO_PIN"] * (len(plan["cols"]) - k)}
+                notes.append("Flipped in firmware: right controller gets the reversed column list "
+                             "(split.matrix_pins.right / MATRIX_COL_PINS_RIGHT) so its outer column shares the left's outer pin.")
+            plan["right"] = right
+            for name, used, pins in (("left", lcols, plan["cols"]), ("right", rcols, (right or plan)["cols"])):
+                unused = [p for c, p in enumerate(pins) if c not in used and p not in (None, "NO_PIN")]
+                if unused:
+                    notes.append(f"On the {name} controller, column pin(s) {', '.join(unused)} have no keys: leave unconnected.")
+    return {"errors": errors, "warnings": warnings, "notes": notes, "rows": n_rows, "cols": n_cols,
             "rows_per_half": rph if split else None, "plan": plan}
 
 
@@ -475,8 +517,19 @@ def build_output(fmt, layout, keys, res, board, split, args):
         }
         kb.update({k: v for k, v in board.get("qmk", {}).items()})
         if split:
+            # Declare everything explicitly: split, link method, each side's pins.
             drv = "vendor" if board["mcu"] == "RP2040" else "bitbang"
-            kb["split"] = {"enabled": True, "serial": {"driver": drv, "pin": plan["split_link"]}}
+            right = plan.get("right") or {"rows": plan["rows"], "cols": plan["cols"]}
+            nul = lambda pins: [None if p == "NO_PIN" else p for p in pins]
+            kb["split"] = {
+                "enabled": True,
+                "transport": {"protocol": "serial"},
+                "serial": {"driver": drv, "pin": plan["split_link"]},
+                "matrix_pins": {"right": {"rows": nul(right["rows"]), "cols": nul(right["cols"])}},
+            }
+            res["notes"].append("Handedness: the USB side is the left/master half by default (MASTER_LEFT in config.h). "
+                                "To plug into either half, use EE_HANDS and flash each half once with "
+                                ":uf2-split-left / :uf2-split-right (RP2040) or :avrdude-split-left/right (Pro Micro).")
         for k in matrix_keys(keys):
             e = {"matrix": k["matrix"], "x": round(k["x"], 3), "y": round(k["y"], 3)}
             for f, d in (("w", 1), ("h", 1), ("r", 0), ("rx", 0), ("ry", 0)):
@@ -520,6 +573,10 @@ def build_output(fmt, layout, keys, res, board, split, args):
         ]
         if split:
             txt += ["", f"/* <shield>_right.overlay */\n&default_transform {{ col-offset = <{res['cols']}>; }};"]
+            right = plan.get("right")
+            if right:
+                cols_r = [p for p in right["cols"] if p not in (None, "NO_PIN")]
+                txt += ["&kscan0 {", "    col-gpios\n        = " + "\n        , ".join(gp(p, cin) for p in cols_r) + "\n        ;", "};"]
         return "\n".join(txt)
     raise ValueError(f"Unknown format {fmt}")
 
@@ -551,8 +608,13 @@ def print_report(keys, res, board, split, route_info):
     print("Columns:")
     for c in sorted(by_col):
         pin = plan["cols"][c] if plan and c < len(plan["cols"]) else "-"
+        right = (plan or {}).get("right")
+        if right and c < len(right["cols"]) and right["cols"][c] != pin:
+            pin = f"{pin} (L) / {right['cols'][c]} (R)"
         ks = sorted(by_col[c], key=lambda k: (k["cx"] > (route_info or {}).get("split_at", 1e9), k["cy"]))
         print(f"  col {c:>2} → {pin:<6} {', '.join(key_name(k) for k in ks)}")
+    for n in res.get("notes", []):
+        print(f"NOTE: {n}")
     for w in res["warnings"]:
         print(f"WARNING: {w}")
     for e in res["errors"]:
@@ -589,8 +651,11 @@ def main(argv=None):
         s.add_argument("--name", help="keyboard name for generated files")
         s.add_argument("--json", action="store_true", help="print machine-readable report")
         if name == "route":
-            s.add_argument("--mirror-right", action="store_true",
-                           help="number right-half columns from its outer edge (mirrored handwiring)")
+            s.add_argument("--right-wiring", choices=["mirrored", "same", "flipped"], default="mirrored",
+                           help="right half: mirrored (outer col = 0, QMK lily58/sofle; default), same (leftmost = 0, "
+                                "QMK dactyl_manuform) or flipped (numbered like same, wired mirror-image, reversed "
+                                "split.matrix_pins.right)")
+            s.add_argument("--mirror-right", action="store_true", help="same as --right-wiring mirrored (kept for 1.0 scripts)")
             s.add_argument("--row-tol", type=float, default=0.6, help="row band tolerance in u")
             s.add_argument("--col-tol", type=float, default=0.55, help="column band tolerance in u")
     args = p.parse_args(argv)
@@ -613,11 +678,17 @@ def main(argv=None):
     keys = layout["keys"]
     route_info = None
     if args.cmd == "route":
-        route_info = route(keys, args.split, args.mirror_right, args.row_tol, args.col_tol)
+        route_info = route(keys, args.split, "mirrored" if args.mirror_right else args.right_wiring, args.row_tol, args.col_tol)
     file_pins = layout["meta"].get("matrix_pins") if args.cmd == "validate" else None
     if file_pins and args.split is False and layout["meta"].get("split", {}).get("enabled"):
         args.split = True
-    res = analyse(keys, board, args.split, args.unlock, args.firmware, args.split_link, file_pins)
+    file_right = None
+    if args.cmd == "validate":
+        sp = layout["meta"].get("split")
+        file_right = (sp.get("matrix_pins") or {}).get("right") if isinstance(sp, dict) else None
+    res = analyse(keys, board, args.split, args.unlock, args.firmware, args.split_link, file_pins,
+                  right_wiring=getattr(args, "right_wiring", "mirrored"), file_right_pins=file_right,
+                  split_guessed=args.cmd == "route")
 
     fmt = args.format or (None if args.cmd == "validate" and not args.out else
                           {"kle": "kle", "via": "via", "qmk": "via"}[layout["kind"]])

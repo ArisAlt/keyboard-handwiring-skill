@@ -28,8 +28,8 @@ Run the bundled tool (Python 3, stdlib only) instead of eyeballing coordinates:
 ```bash
 python scripts/matrix_tool.py boards                       # board profiles + pin notes
 python scripts/matrix_tool.py route layout.json --board rp2040_zero --out via.json
-python scripts/matrix_tool.py route layout.json --board rp2040_zero --split --mirror-right \
-       --format qmk --out keyboard.json                    # QMK keyboard.json with pins + split
+python scripts/matrix_tool.py route layout.json --board rp2040_zero --split \
+       --format qmk --out keyboard.json                    # QMK keyboard.json, explicit split config
 python scripts/matrix_tool.py route layout.json --board nice_nano_v2 --split --format zmk
 python scripts/matrix_tool.py validate vial.json --board pro_micro --split --firmware vial --unlock 0,0 0,1
 ```
@@ -37,7 +37,11 @@ python scripts/matrix_tool.py validate vial.json --board pro_micro --split --fir
 - `route` auto-assigns `row,col` from geometry (rotation-aware), keeps the file's key order, resolves collisions, and can write: `via`/`kle` (layout with `row,col` in legend position 0, original legends kept), `qmk` (`keyboard.json`: processor, pins, split serial, layout), or `zmk` (kscan + matrix-transform snippet, right half as column offset).
 - `validate` checks an already-annotated layout: duplicate or missing coordinates (VIA `option,choice` alternates may share), unused rows/columns, pin budget per half, split row parity, Vial unlock-combo keys, board/firmware compatibility.
 - Both print the pin plan: each row/column → MCU pin → the keys on that wire. Add `--json` for machine-readable output. Exit code 1 means errors.
-- `--mirror-right` numbers the right half's columns from its outer edge (QMK `lily58/rev1`, `sofle` style) — the usual choice when the right half is wired as a mirror image of the left with the same pin list. Without it, col 0 is the right half's inner (leftmost) column (`handwired/dactyl_manuform` style). Either is valid; the matrix must match the wiring, consistently for every row.
+- `--right-wiring` picks the split convention (the matrix must match the wiring, consistently for every row):
+  - `mirrored` (default): right half's outer column is col 0, same pin list (QMK `lily58/rev1`, `sofle`).
+  - `same`: col 0 is the right half's leftmost column, same pin list (QMK `handwired/dactyl_manuform`).
+  - `flipped`: numbered like `same` but wired mirror-image; the right controller gets a reversed column list (`split.matrix_pins.right` / `MATRIX_COL_PINS_RIGHT`, `NO_PIN`/null padded, like `keebio/iris/rev8`).
+- For splits the report adds NOTEs: keys per half (uneven halves are fine), column pins with no keys on each controller, handedness; and warns when an auto-split layout's halves touch or overlap (the split line is a guess).
 
 The router favours **straight wires** (easiest to solder). Commercial designs often fold stray keys into another row to save a pin — e.g. Lily58 puts its inner `[`/`]` keys in the thumb row, giving 6 columns per half where straight routing gives 7. Offer folding only when pins are short, and describe the fold physically ("the `[` key joins the thumb-row wire").
 
@@ -81,6 +85,7 @@ Generated config must reuse the **exact** pin order and coordinates from step 3.
 Re-run `validate` on the final layout. Also check:
 - `MATRIX_ROWS` for a split = 2 × rows per half (QMK reads left rows first, then right).
 - Split: each half's wires run to its own controller; the TRRS link pin is the same on both halves and not used in the matrix.
+- Split firmware declares, explicitly: the board is split (`split.enabled`), the link (`split.transport.protocol` + `split.serial` driver/pin, or I2C; BLE = ZMK), each side's row/column pins (`matrix_pins` + `split.matrix_pins.right`), and handedness (`MASTER_LEFT`, `EE_HANDS` or `split.handedness.pin`).
 - Amoeba Royale boards: `ROW2COL`, not `COL2ROW`.
 - Per-key RGB: brightness capped for the USB budget, `ws2812` pin not in the matrix.
 - Vial unlock combo points at keys that exist.

@@ -27,5 +27,5 @@
 - `layouts.<NAME>.layout[]`: `{"matrix": [r, c], "x", "y", "w", "h", "r", "rx", "ry"}`. Order = `LAYOUT()` macro arguments.
 - The QMK API (`keyboards.qmk.fm/v1/keyboards/<path>/info.json`) wraps the data: `{"keyboards": {"<path>": {...}}}`. `matrix_tool.py` unwraps it.
 
-## Cubify
-Browser handwiring visualizer (github.com/ArisAlt/cubify): imports KLE, auto-routes rows/columns, draws wires in top/bottom view and exports a Vial ZIP. Same `row,col` label convention as above.
+## Keyboardfy (formerly Cubify)
+Browser handwiring visualizer (github.com/ArisAlt/keyboardfy): imports KLE (including raw files exported from editor.keyboard-tools.xyz), auto-routes rows/columns (or direct wiring for small pads), draws wires in top/bottom view and exports a VIA, QMK or Vial firmware folder (`keyboard.json`, keymaps, `build.sh`, step-by-step `BUILD.md`). Same `row,col` label convention as above.

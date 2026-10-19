@@ -9,10 +9,13 @@ Machine-readable copy: `boards.json` (used by `scripts/matrix_tool.py`). When a 
 | Waveshare RP2040-Zero | RP2040 | 20 (+9 bottom pads) | QMK, Vial | 3.3 V |
 | Waveshare RP2040-Tiny | RP2040 | 20 | QMK, Vial | 3.3 V |
 | Waveshare RP2040-Plus / Raspberry Pi Pico | RP2040 | 26 | QMK, Vial | 3.3 V |
+| Raspberry Pi Pico 2 / 2 W | RP2350 | 26 | **not QMK/Vial** (2026-10) | 3.3 V |
 | Pro Micro (ATmega32U4) | AVR | 18 | QMK, Vial | 5 V |
 | nice!nano v2 / SuperMini nRF52840 | nRF52840 | 16 (+5 awkward) | **ZMK only** | 3.3 V |
 
-On a wired split, one pin per half is the TRRS link (suggested: Plus GP28, Zero/Tiny GP29, Pro Micro D2) — it's not available for the matrix.
+On a wired split, one pin per half is the TRRS link (suggested: Plus/Pico GP28, Zero/Tiny GP29, Pro Micro D2) — it's not available for the matrix.
+
+Never guess a board's data: if a board, pin or bootloader isn't listed, look it up from the maker's pinout first. A silent "assume it's like an RP2040" default is how wrong firmware gets built.
 
 Max keys without tricks ≈ (pins/2)² — 18 pins → 9×9 = 81 keys. For a split, each half has its own pins; rows per half × 2 = total rows.
 
@@ -22,14 +25,16 @@ Max keys without tricks ≈ (pins/2)² — 18 pins → 9×9 = 81 keys. For a spl
 - BOOT + RESET buttons; RP2040 is not 5 V tolerant.
 
 ## Waveshare RP2040-Tiny
-- 20 castellated GPIOs; USB-C is on a separate adapter joined by an 8-pin FPC cable (keep the cable strain-free inside a case).
+- 20 castellated GPIOs, verified against Waveshare's pinout image: right edge GP0–GP9, bottom GP10–GP13, left GP14, GP15, GP26–GP29 (the same 20 as the Zero). GP24/GP25 are on small "user mode selection" pads, not edge pins.
 - GP16 drives the onboard WS2812.
-- The exact edge pin list in `boards.json` is **unverified** — confirm with the Waveshare pinout before wiring.
+- USB-C is on a separate adapter joined by an 8-pin FPC cable (keep it strain-free inside a case). **The BOOT and RESET buttons are on that adapter**, not on the main board.
 
 ## Waveshare RP2040-Plus / Raspberry Pi Pico
 - Header GPIOs: GP0–GP22, GP26–GP28 (26 pins).
 - Not usable: GP23 (regulator mode), GP24 (VBUS sense), GP25 (LED), GP29 (VSYS sense, not on header). Pico W boards use these for the radio.
 - Power: VBUS = header pin 40 (USB 5 V — feed per-key LEDs from here), VSYS = 39, 3V3 = 36; GND = pins 3, 8, 13, 18, 23, 28, 33, 38 (skip these when running a ribbon cable).
+- Buttons: the RP2040-Plus has BOOT and RESET; the **Pico has only BOOTSEL** (no reset button: short RUN, header pin 30, to GND). `matrix_tool.py` has both as `rp2040_plus` and `pico`.
+- **Pico 2 / Pico 2 W (RP2350)**: same footprint, but QMK and Vial don't support the RP2350 yet (2026-10) — don't plan QMK/VIA/Vial firmware for it.
 
 ## Pro Micro (ATmega32U4)
 - 18 GPIOs: D3 (TX), D2 (RX), D1 (SDA), D0 (SCL), D4, C6, D7, E6, B4, B5, B6, B2, B3, B1, F7, F6, F5, F4.

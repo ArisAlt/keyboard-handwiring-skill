@@ -37,7 +37,11 @@ keyboards/handwired/<name>/
 - `layout` array order = argument order of the `LAYOUT(...)` macro in `keymap.c`. Each entry's `matrix` is `[row, col]`; `x/y/w/h/r/rx/ry` follow KLE semantics.
 - Pin names: RP2040 `GPn`, AVR `D4`/`F6`… Pin order in `rows`/`cols` = matrix index order.
 - Use a non-zero, unique-ish `pid`; `0xFEED` vid is the QMK hobby convention.
-- Don't define the same thing in both `keyboard.json` and `config.h`/`rules.mk` (e.g. pins, MCU) — QMK lint complains and the build may pick the wrong one.
+- Don't define the same thing in both `keyboard.json` and `config.h`/`rules.mk` (e.g. pins, MCU) — QMK lint complains and the build may pick the wrong one. Keep pins and matrix size **only** in keyboard.json: `config.h` is for what JSON can't say (handedness, notes). This matters for Vial too (see below).
+- The layout should start at `x = 0` and `y = 0`, or QMK warns "Layout is offset on X/Y axis". KLE exports often start at 0.14 or 0.7 — shift every key by the same amount.
+- **No negative `rx`/`ry`**: QMK's schema rejects them and then drops the *whole* keyboard.json ("No LAYOUTs defined", bootmagic range errors follow). KLEs of angled boards (Alice, Arisu) often rotate around a point left of or above the board (`rx: -0.25`). Fix without moving anything: re-express each rotated key as rotating about its own rotated top-left corner (`x = rx = X`, `y = ry = Y`), then shift. `matrix_tool.py --format qmk` does both, and its output compiles.
+- Re-exporting into a folder that already holds an older version: delete the old `info.json`, `config.h`, `rules.mk`, `keyboard.h` first. Left-over files override the new keyboard.json and the build fails or warns in confusing ways.
+- Prove it builds: `qmk compile -kb handwired/<name> -km <keymap>` validates keyboard.json too. Run it before telling anyone the firmware is ready.
 
 ## Split keyboards
 
@@ -58,12 +62,17 @@ config.h equivalents: `SPLIT_KEYBOARD = yes` (rules.mk), `SOFT_SERIAL_PIN` / `SE
 
 ## RP2040 specifics
 
-- Bootloader entry: hold BOOT while plugging in, or bootmagic (hold key `[0,0]` while plugging), or the `QK_BOOT` keycode. Add `#define RP2040_BOOTLOADER_DOUBLE_TAP_RESET` (and optional `RP2040_BOOTLOADER_DOUBLE_TAP_RESET_TIMEOUT 200U`) to `config.h` to enter it by double-tapping reset.
-- Flash by copying the `.uf2` to the `RPI-RP2` drive.
+- **First flash**: unplug, hold BOOT (BOOTSEL on a Pico; on the RP2040-Tiny the button is on its USB-C adapter), plug in, let go → a drive called `RPI-RP2` appears. Nothing else works yet, because there's no QMK on the chip.
+- **After that**: Bootmagic (hold the key set in `bootmagic.matrix`, default `[0,0]`, while plugging in), the `QK_BOOT` keycode, or double-tapping RESET. Double-tap is already on when keyboard.json sets no `board` (QMK's default RP2040 board, `GENERIC_PROMICRO_RP2040`, defines `RP2040_BOOTLOADER_DOUBLE_TAP_RESET`); with `BOARD = GENERIC_RP_RP2040` add the define yourself. The Pico has no RESET button.
+- Flash by copying the `.uf2` to the `RPI-RP2` drive, or `qmk flash -kb … -km …`, which waits for the drive and copies it (`uf2conv --deploy`).
 
 ## Vial
 
-Vial = QMK fork with live remapping and a security unlock. Build in the **vial-qmk** repo (`make handwired/<name>:vial`), not upstream QMK.
+Vial = QMK fork with live remapping and a security unlock. Build in the **vial-qmk** repo (`make handwired/<name>:vial`), not upstream QMK. Current vial-qmk reads a data-driven `keyboard.json` like QMK (proven 2026-10).
+
+Build gotchas (each one found by actually compiling):
+- **Python 3.14**: vial-qmk's helper `qmk/math.py` still uses `ast.Num`, removed in Python 3.14. It only runs when `config.h` defines `MATRIX_ROWS`/`MATRIX_COLS`, so `AttributeError: module 'ast' has no attribute 'Num'` goes away when the matrix lives only in keyboard.json `matrix_pins` (the right way anyway).
+- **`make` can't find `arm-none-eabi-gcc`**: the QMK CLI installer puts its compilers in `~/.local/share/qmk/bin` (or `$QMK_DISTRIB_DIR/bin`), and only the `qmk` command adds that to PATH. Vial's docs say to build with `make`, so add it yourself: `PATH="$HOME/.local/share/qmk/bin:$PATH" make handwired/<name>:vial`.
 
 - `keymaps/vial/rules.mk`: `VIA_ENABLE = yes` and `VIAL_ENABLE = yes` (here, not in the keyboard's rules).
 - `keymaps/vial/config.h`:
@@ -76,9 +85,29 @@ Vial = QMK fork with live remapping and a security unlock. Build in the **vial-q
 - `vial.json`: `name`, `vendorId`, `productId` (match `usb`), `matrix: {rows, cols}` (total rows for splits), and `layouts.keymap` = KLE array whose keys carry `"row,col"` as the first legend. `matrix_tool.py route --out` produces exactly this.
 - Layout alternatives (split backspace, ISO enter…) share coordinates and add `"option,choice"` as the 4th legend line (label position 8); `layouts.labels` names the options.
 
+## VIA
+
+- `keymaps/via/rules.mk`: `VIA_ENABLE = yes` (keymap level only; on a Pro Micro add `LTO_ENABLE = yes` for space). VIA keeps 4 dynamic layers by default.
+- VIA only knows boards from its own list, so a handwired board needs its definition loaded by hand: a VIA v3 `via.json` with `name`, `vendorId`, `productId` (same as keyboard.json `usb`), `matrix: {rows, cols}` (total rows on a split) and `layouts.keymap` = the KLE with each key's first legend set to `"row,col"`. Keep the user's original KLE (rotation and all) and only relabel its keys, rather than rebuilding rows.
+- Load it in **usevia.app** with Chrome or Edge (VIA uses WebHID; Firefox and Safari can't): Settings → turn on **"Show Design tab"** → Design → **"Load Draft Definition"** → Load → pick `via.json`. The keyboard then appears under Configure. (Labels as in VIA's app source.)
+- Give every board its own VID/PID pair: VIA tells definitions apart by it.
+
+## Linux: device access (udev)
+
+- Flashing (DFU/caterina/avrdude): install QMK's rules with `sh ~/qmk_firmware/util/install_udev.sh` (newer trees; older ones had `util/udev/50-qmk.rules`).
+- A rule file in `/etc/udev/rules.d/` **overrides** a same-named one in `/usr/lib/udev/rules.d/`. A broken copy there (e.g. a saved "404: Not Found" page from a failed download) silently masks the working rules: check `head /etc/udev/rules.d/50-qmk.rules` when flashing can't find the board.
+- VIA in the browser needs access to the keyboard's hidraw device:
+  `echo 'KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="feed", ATTRS{idProduct}=="<pid>", MODE="0660", TAG+="uaccess"' | sudo tee /etc/udev/rules.d/59-<name>-via.rules && sudo udevadm control --reload && sudo udevadm trigger`
+- Vial: use Vial's own rule (`59-vial.rules`, matches its serial) from get.vial.today/manual/linux-udev.html.
+
 ## Keymap sanity
 
 Give layer 0 real keycodes. A layer 0 full of `KC_TRNS` produces a keyboard that types nothing until remapped — and a dead board after an EEPROM reset. 4 layers is the VIA/Vial default dynamic layer count.
+
+Layer 0 from the KLE legends works well for a first firmware:
+- KLE puts a key's **shifted** symbol top-left (slot 0) and the **unshifted** one bottom-left (slot 1): `"!\n1"` → `KC_1`, `"_\n-"` → `KC_MINS`, `"\"\n'"` → `KC_QUOT`. Use slot 1 when slot 0 is a lone symbol.
+- Letters, digits, F-keys and names (Esc, Tab, Caps, Enter, Backspace, Del, Ins, PgUp/PGDW, arrows) map directly; `Shift`/`Ctrl`/`Alt`/`Win` right of the board's middle get the right-hand keycode; a blank key ≥ 2u is the space bar; `Fn` → `MO(1)`.
+- Don't guess the rest (`MOD`, `Hyper`, custom names): make them `KC_NO` and list them so the user sets them in VIA/Vial.
 
 ## Outdated advice in older guides (pre-2023)
 

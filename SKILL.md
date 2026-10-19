@@ -11,13 +11,13 @@ Turn a physical key layout into a wiring plan someone can solder, plus firmware 
 
 ### 1. Pin down the inputs
 
-Ask only for what you can't infer:
+Ask only for what you can't infer — but when something is genuinely unclear (which board, which firmware, which split convention, whether it's already soldered), ask in **one round of short multiple-choice questions** before building, not after. Guessing and redoing costs more than one question.
 
 | Input | Why it matters |
 |---|---|
 | Layout source (KLE raw JSON, kle-ng share/export, VIA/Vial JSON, QMK `info.json`/`keyboard.json`) | Physical positions; may already carry `row,col` labels |
 | Microcontroller board | Usable pins, firmware support, voltage |
-| Firmware: QMK, Vial (QMK fork) or ZMK | nRF52840 boards (nice!nano) are **ZMK only** — QMK does not run on them |
+| Firmware: QMK, VIA, Vial (QMK fork) or ZMK | nRF52840 boards (nice!nano) are **ZMK only** — QMK does not run on them; RP2350 (Pico 2) has no QMK support yet |
 | Split? Wired (TRRS/serial) or wireless? | Pins per half, link pin, handedness, power |
 | Diode direction (default `COL2ROW`) | Diode orientation when soldering and firmware setting |
 
@@ -57,6 +57,8 @@ Matrix design rules (and why):
 
 Use `references/boards.md` (human notes) — the tool reads the same data from `references/boards.json`. Rules:
 - Never use pins marked reserved (onboard LEDs, power/sense pins, USB). Avoid pins needed for something else on this build: split link, I2C OLED (SDA/SCL), RGB data.
+- Never fill a gap with a default: if the board, a pin or the bootloader isn't in `boards.json`, look it up from the maker's pinout first. "Assume it's like an RP2040" is how firmware for the wrong chip gets built.
+- Changing boards mid-design: every pin must come from the **new** board's list (no left-overs from the old one), the split link pin changes too — re-run `route`/`validate`.
 - Keep the split link pin identical on both halves.
 - Prefer contiguous, edge-accessible pins in physical order so wires don't cross over the controller.
 - RP2040 and nRF52840 are **3.3 V and not 5 V tolerant**; the Pro Micro (ATmega32U4) is 5 V. Don't mix logic levels on a split link.
@@ -78,11 +80,11 @@ Read the reference for the target firmware before writing files — the details 
 - QMK / Vial → `references/qmk-vial.md`
 - ZMK → `references/zmk.md`
 
-Generated config must reuse the **exact** pin order and coordinates from step 3. If you change one, re-run `validate`.
+Generated config must reuse the **exact** pin order and coordinates from step 3. If you change one, re-run `validate`. Keep pins and matrix in `keyboard.json` only (not also in `config.h`) — duplicates make QMK warn and break vial-qmk on Python 3.14. VIA needs a `via.json` the user loads in usevia.app's Design tab; Vial builds in vial-qmk with `make`.
 
 ### 6. Validate before anyone solders or flashes
 
-Re-run `validate` on the final layout. Also check:
+Re-run `validate` on the final layout, and **prove the firmware builds** when a QMK tree is available (`qmk compile -kb … -km …`, or `make …:vial` in vial-qmk). Build and flash steps you hand over should be ones that were actually run: reading docs alone missed real failures (a Python 3.14 break in vial-qmk, `make` not finding QMK's compiler, stale files from an older export). Also check:
 - `MATRIX_ROWS` for a split = 2 × rows per half (QMK reads left rows first, then right).
 - Split: each half's wires run to its own controller; the TRRS link pin is the same on both halves and not used in the matrix.
 - Split firmware declares, explicitly: the board is split (`split.enabled`), the link (`split.transport.protocol` + `split.serial` driver/pin, or I2C; BLE = ZMK), each side's row/column pins (`matrix_pins` + `split.matrix_pins.right`), and handedness (`MASTER_LEFT`, `EE_HANDS` or `split.handedness.pin`).

@@ -25,8 +25,8 @@
       "extra": [],
       "reserved": { "GP16": "onboard WS2812 RGB LED" },
       "split_link": "GP29",
-      "verified": false,
-      "notes": "20 GPIOs on castellated edges; USB-C lives on a separate adapter board joined by an 8-pin FPC cable. Pin list NOT verified against Waveshare's diagram — check the silkscreen/wiki before wiring.",
+      "verified": true,
+      "notes": "20 castellated GPIOs, verified against Waveshare's pinout image (wiki RP2040-Tiny, 2026-10): right edge GP0-GP9, bottom GP10-GP13, left GP14, GP15, GP26-GP29. GP16 = onboard WS2812. GP24/GP25 sit on the 'user mode selection' pads (not edge pins). The main board has no buttons: BOOT and RESET are on the USB-C adapter board, joined by an 8-pin FPC cable.",
       "led_supply": { "vdd": "5V", "vss": "GND" }
     },
     "rp2040_plus": {
@@ -41,6 +41,20 @@
       "split_link": "GP28",
       "verified": true,
       "notes": "26 header GPIOs. GP23/24/25/29 are wired to board functions and not on the header. Pico W variants use these for the wireless chip.",
+      "led_supply": { "vdd": "VBUS (header pin 40)", "vss": "GND (e.g. header pin 38)" }
+    },
+    "pico": {
+      "label": "Raspberry Pi Pico (RP2040)",
+      "mcu": "RP2040",
+      "logic_v": 3.3,
+      "firmware": ["qmk","vial"],
+      "qmk": { "processor": "RP2040", "bootloader": "rp2040" },
+      "pins": ["GP0","GP1","GP2","GP3","GP4","GP5","GP6","GP7","GP8","GP9","GP10","GP11","GP12","GP13","GP14","GP15","GP16","GP17","GP18","GP19","GP20","GP21","GP22","GP26","GP27","GP28"],
+      "extra": [],
+      "reserved": { "GP23": "regulator power-save control (Pico)", "GP24": "VBUS sense", "GP25": "onboard LED", "GP29": "VSYS/3 voltage sense (ADC3), not on header" },
+      "split_link": "GP28",
+      "verified": true,
+      "notes": "Same 26 header GPIOs as the RP2040-Plus (GP0-22, GP26-28). GP23 = SMPS mode, GP24 = VBUS sense, GP25 = LED, GP29 = VSYS/3 sense: internal, not on the header. Only a BOOTSEL button, no RESET button (RUN is header pin 30: short it to GND to reset). Pico W: same keyboard pins; its LED is on the Wi-Fi chip. Pico 2 / 2 W are RP2350: not supported by QMK/Vial (2026-10).",
       "led_supply": { "vdd": "VBUS (header pin 40)", "vss": "GND (e.g. header pin 38)" }
     },
     "pro_micro": {

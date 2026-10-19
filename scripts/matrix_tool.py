@@ -152,7 +152,10 @@ def load_layout(path, layout_name=None):
     with open(path) as f:
         data = json.load(f)
     if isinstance(data, list):
-        return {"kind": "kle", "raw": data, "keys": parse_kle(data), "meta": {}}
+        # A raw KLE (e.g. exported from editor.keyboard-tools.xyz) may start with a metadata object
+        # ({"name": "AliceZero", "backcolor": ...}); its name names the keyboard.
+        meta = next((r for r in data if isinstance(r, dict)), {})
+        return {"kind": "kle", "raw": data, "keys": parse_kle(data), "meta": {"name": meta["name"]} if meta.get("name") else {}}
     if not isinstance(data, dict):
         raise ValueError("Unrecognised file: expected a JSON array or object")
     if "keyboards" in data and isinstance(data["keyboards"], dict):  # QMK API wrapper
@@ -538,6 +541,26 @@ def build_output(fmt, layout, keys, res, board, split, args):
             if k["legend"]:
                 e["label"] = k["legend"]
             kb["layouts"]["LAYOUT"]["layout"].append(e)
+        # QMK's schema rejects a negative rx/ry (the whole keyboard.json is dropped), and it warns
+        # unless the layout starts at x=0, y=0 (ISO enter counted from x-0.25). So: a rotated key is
+        # re-expressed as rotating about its own (rotated) top-left corner — the same drawn key — and
+        # then every key is shifted so the smallest x and y are 0, which leaves no coordinate < 0.
+        lay = kb["layouts"]["LAYOUT"]["layout"]
+        if lay:
+            for e, k in zip(lay, matrix_keys(keys)):
+                if k["r"]:
+                    a = math.radians(k["r"])
+                    dx, dy = k["x"] - k["rx"], k["y"] - k["ry"]
+                    X = k["rx"] + dx * math.cos(a) - dy * math.sin(a)
+                    Y = k["ry"] + dx * math.sin(a) + dy * math.cos(a)
+                    e["x"] = e["rx"] = X
+                    e["y"] = e["ry"] = Y
+            left = lambda e: e["x"] - 0.25 if e.get("h", 1) == 2 and e.get("w", 1) == 1.25 else e["x"]
+            ox, oy = min(left(e) for e in lay), min(e["y"] for e in lay)
+            for e in lay:
+                for f, o in (("x", ox), ("rx", ox), ("y", oy), ("ry", oy)):
+                    if f in e:
+                        e[f] = round(e[f] - o, 3)
         return kb
     if fmt == "zmk":
         if not board or "pro_micro_index" not in board:

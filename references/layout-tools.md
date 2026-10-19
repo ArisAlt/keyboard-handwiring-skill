@@ -27,5 +27,9 @@
 - `layouts.<NAME>.layout[]`: `{"matrix": [r, c], "x", "y", "w", "h", "r", "rx", "ry"}`. Order = `LAYOUT()` macro arguments.
 - The QMK API (`keyboards.qmk.fm/v1/keyboards/<path>/info.json`) wraps the data: `{"keyboards": {"<path>": {...}}}`. `matrix_tool.py` unwraps it.
 
+## KLE files from editor.keyboard-tools.xyz
+
+A raw KLE export is a JSON array whose first element is often a metadata object (`{"name": "AliceZero", "backcolor": …}`): use its `name` for the keyboard. Parse it as strict JSON first. Tools that "fix" loose KLE text with regexes (unquoted keys, single quotes) also rewrite legends such as `'` and `"`, and the keymap built from them comes out wrong.
+
 ## Keyboardfy (formerly Cubify)
 Browser handwiring visualizer (github.com/ArisAlt/keyboardfy): imports KLE (including raw files exported from editor.keyboard-tools.xyz), auto-routes rows/columns (or direct wiring for small pads), draws wires in top/bottom view and exports a VIA, QMK or Vial firmware folder (`keyboard.json`, keymaps, `build.sh`, step-by-step `BUILD.md`). Same `row,col` label convention as above.
